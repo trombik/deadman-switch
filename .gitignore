@@ -1,1 +1,3 @@
 .pio
+*.sch-bak
+fp-info-cache
