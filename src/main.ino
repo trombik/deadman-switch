@@ -22,11 +22,6 @@ Bounce debouncer = Bounce();
 void
 setup()
 {
-    Serial.begin(115200);
-    delay(3);
-    Serial.println();
-    Serial.println(__FILE__);
-
     pinMode(GPIO_LOAD, OUTPUT);
     pinMode(GPIO_SWITCH, INPUT_PULLUP);
     pinMode(GPIO_BUZZER, OUTPUT);
