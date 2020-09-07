@@ -1,34 +1,70 @@
 #include <Bounce2.h>
 
-#define GPIO_SWITCH (2)
-#define GPIO_LOAD (3)
-#define GPIO_BUZZER (4)
+/*
+ * Deadman switch. the code works with ATMega328p, or arduino board.
+ *
+ * When powered on, the microcontroller turns the load on, and a timer starts.
+ *
+ * When the defined interval * 0.2 passes, it beeps twice.
+ *
+ * When the defined interval passes, it turns off the load.
+ *
+ * When GPIO_ON_BUTTON is pressed, the timer resets, effectively extend the
+ * interval.
+ *
+ * When GPIO_OFF_BUTTON is pressed, it turns the load off.
+ *
+ */
+
+/* ATtiny13
+ *
+ * MicroCore (https://github.com/MCUdude/MicroCore) does not work well with
+ * tone() and millis() because the chip has just a single timer. ATtiny85 with
+ * ATTinyCore should work.
+ *
+ * 2 -> PB2 (pin 7)
+ * 3 -> PB3 (pin 2)
+ * 4 -> PB4 (pin 3)
+ * 5 -> PB5 (pin 1)
+ *
+ * GND (pin 4)
+ * VCC (pin 8)
+ */
+
+#define GPIO_ON_BUTTON (2)  // A tact switch to turn on (GND)
+#define GPIO_LOAD (3)       // Load (max 40mA)
+#define GPIO_BUZZER (4)     // Piezo speaker (+)
+#define GPIO_OFF_BUTTON (5) // A tact switch to turn off (GND)
 
 #define INTERVAL_MS (10 * 1000)
 #define BEEP_TIME_MS (2 * 1000)
 #define BEEP_DURATION_MS (200)
 #define BEEP_IN_PERCENT (20)
 
-/* C (three octave) */
-#define TONE_FREQ (523 * 3)
+#define TONE_FREQ (523 * 7)
 
 bool beeped;
 bool waiting;
 int gpio_switch_state;
 
 uint32_t started;
-Bounce debouncer = Bounce();
+Bounce button_1 = Bounce(); // "I'm alive" button
+Bounce button_2 = Bounce(); // A button to turn the load off immediately
 
 void
 setup()
 {
     pinMode(GPIO_LOAD, OUTPUT);
-    pinMode(GPIO_SWITCH, INPUT_PULLUP);
     pinMode(GPIO_BUZZER, OUTPUT);
     digitalWrite(GPIO_LOAD, HIGH);
 
-    debouncer.attach(GPIO_SWITCH);
-    debouncer.interval(5);
+    pinMode(GPIO_ON_BUTTON, INPUT_PULLUP);
+    button_1.attach(GPIO_ON_BUTTON);
+    button_1.interval(5);
+
+    pinMode(GPIO_OFF_BUTTON, INPUT_PULLUP);
+    button_2.attach(GPIO_OFF_BUTTON);
+    button_2.interval(5);
     started = millis();
     beeped = false;
     waiting = true;
@@ -71,12 +107,18 @@ time_to_beep()
 void
 loop()
 {
-    debouncer.update();
-    if (debouncer.fell()) {
+    button_1.update();
+    button_2.update();
+    if (button_1.fell()) {
         started = millis();
         beeped = false;
         waiting = true;
         digitalWrite(GPIO_LOAD, HIGH);
+    }
+    if (waiting && button_2.fell()) {
+        waiting = false;
+        digitalWrite(GPIO_LOAD, LOW);
+        beep_longer();
     }
     if (!waiting) {
         return;
