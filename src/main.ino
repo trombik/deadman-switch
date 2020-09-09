@@ -1,5 +1,3 @@
-#include <Bounce2.h>
-
 /*
  * Deadman switch. the code works with ATMega328p, or arduino board.
  *
@@ -46,25 +44,17 @@
 bool beeped;
 bool waiting;
 int gpio_switch_state;
-
 uint32_t started;
-Bounce button_1 = Bounce(); // "I'm alive" button
-Bounce button_2 = Bounce(); // A button to turn the load off immediately
 
 void
 setup()
 {
     pinMode(GPIO_LOAD, OUTPUT);
-    pinMode(GPIO_BUZZER, OUTPUT);
     digitalWrite(GPIO_LOAD, HIGH);
 
+    pinMode(GPIO_BUZZER, OUTPUT);
     pinMode(GPIO_ON_BUTTON, INPUT_PULLUP);
-    button_1.attach(GPIO_ON_BUTTON);
-    button_1.interval(5);
-
     pinMode(GPIO_OFF_BUTTON, INPUT_PULLUP);
-    button_2.attach(GPIO_OFF_BUTTON);
-    button_2.interval(5);
     started = millis();
     beeped = false;
     waiting = true;
@@ -107,15 +97,13 @@ time_to_beep()
 void
 loop()
 {
-    button_1.update();
-    button_2.update();
-    if (button_1.fell()) {
+    if (digitalRead(GPIO_ON_BUTTON) == LOW) {
         started = millis();
         beeped = false;
         waiting = true;
         digitalWrite(GPIO_LOAD, HIGH);
     }
-    if (waiting && button_2.fell()) {
+    if (waiting && digitalRead(GPIO_OFF_BUTTON) == LOW) {
         waiting = false;
         digitalWrite(GPIO_LOAD, LOW);
         beep_longer();
